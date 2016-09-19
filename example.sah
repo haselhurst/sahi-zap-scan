@@ -1,0 +1,12 @@
+//Call ZAP Include File
+_include("zap-include.sah");
+
+//Perform Scan
+isZapOpen();
+resetZap();
+newContext();
+includeInContext();
+spider();
+activeScan();
+getScanReport();
+shutdownZap();

@@ -1,0 +1,191 @@
+//ZAP Include File
+
+//Set Target
+var $target = "http://example.target.com";
+var $encodedTarget = $target.replace("://","%3A%2F%2F");
+
+//User Defined Variables
+var $contextName = "ContextName";
+var $children = "20";
+
+//ZAP Settings
+var $zapURL = "http://127.0.0.1:8080";
+var $zapAPIKey = "*****";
+
+//Functions
+function newContext(){
+	//Delete Context If It Already Exists
+	var $contextURL = $zapURL + "/JSON/context/action/removeContext/?zapapiformat=JSON&apikey=" + $zapAPIKey + "&contextName=" + $contextName;
+	var $request = new RESTRequest();
+	$request.setURL($contextURL);
+	var $response = $request.submit("get");
+
+	//Create Context
+	var $newContextURL = $zapURL + "/JSON/context/action/newContext/?zapapiformat=JSON&apikey=" + $zapAPIKey + "&contextName=" + $contextName;
+
+	var $request = new RESTRequest();
+	$request.setURL($newContextURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $contextID = $jsonParse.contextId;
+}
+
+function includeInContext(){
+	var $includeInContextURL = $zapURL + "/JSON/context/action/includeInContext/?zapapiformat=JSON&apikey=" + $zapAPIKey + "&contextName=" + $contextName + "&regex=\\Q" + $target + "\\E.*";
+	
+	var $request = new RESTRequest();
+	$request.setURL($includeInContextURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $includeInContextResult = $jsonParse.Result;
+	
+	if($includeInContextResult != "OK")
+	{
+		_logExceptionAsFailure("Failed to add URL to context");
+	}
+	
+	return $includeInContextResult;
+}
+
+function spider(){
+	var $spiderURL = $zapURL + "/JSON/spider/action/scan/?zapapiformat=JSON&apikey=" + $zapAPIKey + "&url=" + $encodedTarget + "%2F&maxChildren=" + $children + "&contextName=" + $contextName;
+	
+	var $request = new RESTRequest();
+	$request.setURL($spiderURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $spiderID = $jsonParse.scan;
+	
+	var $spiderProgress = checkSpiderStatus($spiderID);
+	_log("Spidering In Progress - Please Wait...");
+	while($spiderProgress != "100"){
+		$spiderProgress = checkSpiderStatus($spiderID);
+		_wait(1000);
+	}
+	_log("Spidering Complete");
+}
+
+function checkSpiderStatus($spiderID){
+	var $spiderStatusURL = $zapURL + "/JSON/spider/view/status/?zapapiformat=JSON&scanId=" + $spiderID;
+	
+	var $request = new RESTRequest();
+	$request.setURL($spiderStatusURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $spiderStatus = $jsonParse.status;
+	
+	return $spiderStatus;	
+}
+
+function activeScan(){
+	var $activeScanURL = $zapURL + "/JSON/ascan/action/scan/?zapapiformat=JSON&apikey=" + $zapAPIKey + "&url=" + $encodedTarget + "&recurse=&inScopeOnly=true&scanPolicyName=&method=&postData=";
+	
+	var $request = new RESTRequest();
+	$request.setURL($activeScanURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $activeScanID = $jsonParse.scan;
+	
+	var $activeScanProgress = checkActiveScanProgress($activeScanID);
+	_log("Active Scan Progress - Please Wait...");
+	while($activeScanProgress != "100"){
+		if($activeScanProgress == null){
+			_logExceptionAsFailure("Active Scan has failed to start");
+		}
+		else
+		{
+			_wait(1000);
+			$activeScanProgress = checkActiveScanProgress($activeScanID);
+		}
+	}
+	_log("Active Scan Complete");
+}
+
+function checkActiveScanProgress($activeScanID){
+	var $activeScanStatusURL = $zapURL + "/JSON/ascan/view/status/?zapapiformat=JSON&scanId=" + $activeScanID;
+	
+	var $request = new RESTRequest();
+	$request.setURL($activeScanStatusURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $activeScanProgress = $jsonParse.status;
+	
+	return $activeScanProgress;	
+}
+
+function getScanReport($location){
+	if($location == null)
+	{
+		var $saveLocation = "ZapScanResult.png";
+	}
+	else
+	{
+		var $saveLocation = $location + "ZapScanResult.png";
+	}
+	_navigateTo($zapURL + "/OTHER/core/other/htmlreport/?apikey=" + $zapAPIKey);
+	_focusWindow();
+	_takePageScreenShot(null, $saveLocation, false, {format:'png'});
+}
+
+function resetZap(){
+	//Delete All Alerts
+	var $deleteAllAlertsURL = $zapURL + "/JSON/core/action/deleteAllAlerts/?zapapiformat=JSON&apikey=" + $zapAPIKey;
+	var $request = new RESTRequest();
+	$request.setURL($deleteAllAlertsURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $deleteAllAlertsResult = $jsonParse.Result;
+	if($deleteAllAlertsResult != "OK"){
+		_logExceptionAsFailure("Problem deleting all alerts.");
+	}
+	
+	//Set Mode To Standard
+	var $modeURL = $zapURL + "/JSON/core/action/setMode/?zapapiformat=JSON&apikey=" + $zapAPIKey + "&mode=standard";
+	var $request = new RESTRequest();
+	$request.setURL($modeURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $modeResult = $jsonParse.Result;
+	if($modeResult != "OK"){
+		_logExceptionAsFailure("Problem setting Mode to Standard.");
+	}
+}
+
+function isZapOpen()
+{
+    $request = new RESTRequest();
+    $response = new RESTResponse();
+    $request.setURL($zapURL);
+    $response = $request.submit("get");
+	try{
+		var $s = $response.getResponseCode();
+		if($s)
+		{
+			_log("ZAP is open");
+		}
+	}catch($e){
+		_logExceptionAsFailure("Zap is not open");
+		_log("Zap is not open");
+	}
+}
+
+function shutdownZap(){
+	$shutdownZapURL = $zapURL + "/JSON/core/action/shutdown/?zapapiformat=JSON&apikey=" + $zapAPIKey;
+	var $request = new RESTRequest();
+	$request.setURL($shutdownZapURL);
+	var $response = $request.submit("get");
+	var $responseBody = $response.getBodyAsString();
+	var $jsonParse = JSON.parse($responseBody);
+	var $shutdownZapURL = $jsonParse.Result;
+	if($shutdownZapURL != "OK"){
+		_logExceptionAsFailure("ZAP has failed to shut down successfully.");
+	}
+}
