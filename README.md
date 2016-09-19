@@ -32,9 +32,13 @@ A number of variables are contained towards the top of the zap-include.sah file.
 * var $zapAPIKey = "*****";
 
 $target should be set to the URL of the site that you want to perform your scans on.
+
 $contextName should be set to the name that you want to give to your context. This should be relevant to your target. For example, if you are scanning google.com (which realistically you shouldn't be doing) then you may want to call your context "Google".
+
 $children specifies the depth of the spider that you want ZAP to undertake. If you set this as "0" then the homepage of the site that you target would be scanned but no further scanning would be performed. If you set this to "1" then each link from the homepage would be scanned. The larger this number is set to, the more results would show in the spider of the site, but this does increase the amount of time that the scan would take.
+
 $zapURL is the URL for the ZAP API. Typically ZAP runs on your computer (http://127.0.0.1) on port 8080 (:8080). If ZAP is located on a different machine or you've configured it to run on a port other than 8080 then these values should be changed.
+
 $zapAPIKey is the API key that allows your script to interact with ZAP. This can be found within ZAP by going to Tools > Options > API. Make sure that the "Enabled" checkbox is the only checkbox on this screen to be checked. If no API Key is shown then you'll need to click the "Generate Random Key" button before copying the API key from this screen into the $zapAPIKey variable.
 
 ## Code Example
