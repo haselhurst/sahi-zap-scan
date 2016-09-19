@@ -91,6 +91,10 @@ If no location is specified then the scan report will be saved in the same direc
 getScanReport();
 ```
 
+## Warning
+
+Only use this API on sites that you have permission to perform penetration testing on. Initiating any sort of active scan on a site which you do not have prior permission to perform security testing on could have severe legal consequences. Please use this tool responsibly and with permission.
+
 ## License
 [Sahi ZAP Scan](http://github.com/haselhurst/sahi-zap-scan/) - Copyright (c) 2016 Michael Haselhurst
 
